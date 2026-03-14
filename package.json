@@ -16,7 +16,8 @@
     "express": "^4.19.2",
     "helmet": "^7.1.0",
     "morgan": "^1.10.0",
-    "tronweb": "^6.2.0"
+    "tronweb": "^6.2.0",
+    "ws": "^8.19.0"
   },
   "devDependencies": {
     "esbuild": "^0.27.3"

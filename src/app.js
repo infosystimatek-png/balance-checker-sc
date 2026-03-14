@@ -4,7 +4,9 @@ import helmet from "helmet";
 import morgan from "morgan";
 import path from "path";
 import { fileURLToPath } from "url";
+import { createServer } from "http";
 import routes from "./routes.js";
+import { setupWebSocketServer } from "./websocket.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -26,4 +28,8 @@ app.get("*", (req, res, next) => {
   });
 });
 
-export default app;
+// Create HTTP server and attach WebSocket
+const server = createServer(app);
+setupWebSocketServer(server);
+
+export default server;

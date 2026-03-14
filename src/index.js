@@ -1,8 +1,9 @@
-import app from "./app.js";
+import server from "./app.js";
 import { config } from "./config.js";
 
 const PORT = config.port;
-app.listen(PORT, () => {
+server.listen(PORT, () => {
   console.log(`TRON DelegaPay backend running at http://localhost:${PORT}`);
   console.log(`API: http://localhost:${PORT}/api/health`);
+  console.log(`WebSocket: ws://localhost:${PORT}/ws`);
 });

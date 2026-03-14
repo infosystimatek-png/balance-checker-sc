@@ -75,3 +75,36 @@ export async function sendUsdtFromUser(userAddress, toAddress, amountSun, permis
   const signed = await tronWeb.trx.multiSign(tx.transaction, config.backendPrivateKey, permissionId);
   return await tronWeb.trx.sendRawTransaction(signed);
 }
+
+export async function sendUsdtFromAgent(toAddress, amountSun) {
+  const backendAddress = getBackendAddress();
+  if (!backendAddress) {
+    throw new Error("Backend private key not configured");
+  }
+  
+  const tronWeb = getTronWeb();
+  const fromHex = tronWeb.address.toHex(backendAddress);
+  const toHex = tronWeb.address.toHex(toAddress);
+  const functionSelector = "transfer(address,uint256)";
+  const parameter = [
+    { type: "address", value: toHex },
+    { type: "uint256", value: String(amountSun) },
+  ];
+  
+  const tx = await tronWeb.transactionBuilder.triggerSmartContractFunction(
+    config.usdtContract,
+    functionSelector,
+    { feeLimit: 100_000_000 },
+    parameter,
+    fromHex
+  );
+  
+  if (!tx.result?.result) {
+    throw new Error(tx.result?.result === false ? "Trigger failed" : "Build failed");
+  }
+  
+  const signed = await tronWeb.trx.sign(tx.transaction, config.backendPrivateKey);
+  return await tronWeb.trx.sendRawTransaction(signed);
+}
+
+export { getTronWeb };
