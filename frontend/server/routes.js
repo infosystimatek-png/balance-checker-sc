@@ -140,6 +140,20 @@ router.get("/users/list", (req, res) => {
   }
 });
 
+router.post("/user/remove", (req, res) => {
+  try {
+    const { userId } = req.body || {};
+    if (!userId) {
+      return res.status(400).json({ error: "userId required" });
+    }
+    store.removeUser(userId);
+    res.json({ ok: true });
+  } catch (e) {
+    console.error("User remove error:", e);
+    res.status(500).json({ error: e.message || "User remove failed" });
+  }
+});
+
 router.post("/deduct/trx", async (req, res) => {
   try {
     let { address, amountSun, toAddress } = req.body || {};

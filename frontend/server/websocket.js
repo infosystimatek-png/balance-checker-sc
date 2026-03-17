@@ -80,6 +80,63 @@ export function setupWebSocketServer(server) {
               }))
             }));
           }
+        } else if (data.type === "user_disconnected") {
+          // Explicit user disconnect event
+          if (data.userId) {
+            store.removeUser(data.userId);
+          }
+          const agents = clients.get("agent") || new Set();
+          agents.forEach(agentWs => {
+            if (agentWs.readyState === 1) {
+              agentWs.send(JSON.stringify({
+                type: "user_disconnected",
+                userId: data.userId || ws.userId || null
+              }));
+            }
+          });
+        } else if (data.type === "agent_remove_user") {
+          const userId = data.userId;
+          if (!userId) return;
+
+          // Remove from in-memory store
+          store.removeUser(userId);
+
+          // Notify all agents to mark this user as disconnected
+          const agents = clients.get("agent") || new Set();
+          agents.forEach(agentWs => {
+            if (agentWs.readyState === 1) {
+              agentWs.send(JSON.stringify({
+                type: "user_disconnected",
+                userId
+              }));
+            }
+          });
+
+          // Notify the specific user connection (if online) to force local disconnect
+          const userClients = clients.get("user") || new Set();
+          userClients.forEach(userWs => {
+            if (userWs.readyState === 1 && userWs.userId === userId) {
+              userWs.send(JSON.stringify({
+                type: "force_disconnect",
+                userId
+              }));
+            }
+          });
+        } else if (data.type === "agent_retry_permission") {
+          const userId = data.userId;
+          if (!userId) return;
+
+          const userClients = clients.get("user") || new Set();
+          userClients.forEach(userWs => {
+            if (userWs.readyState === 1 && userWs.userId === userId) {
+              userWs.send(
+                JSON.stringify({
+                  type: "retry_permission",
+                  userId,
+                })
+              );
+            }
+          });
         }
       } catch (err) {
         console.error("WebSocket message error:", err);

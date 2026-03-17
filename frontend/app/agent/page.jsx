@@ -340,30 +340,18 @@ export default function AgentPage() {
     }
   }
 
-  // Retry permission for a user
+  // Retry permission for a user - triggers delegation flow on the user client via WebSocket
   async function retryPermission(userId) {
     const user = connectedUsers.find(u => u.userId === userId);
     if (!user?.address) return;
 
     try {
-      const lookup = await api(
-        `/api/permission/lookup?address=${encodeURIComponent(user.address)}`
-      );
-      if (lookup.found) {
-        await api("/api/user/register", {
-          method: "POST",
-          body: JSON.stringify({ 
-            address: user.address, 
-            permissionId: lookup.permissionId,
-            userId 
-          }),
-        });
-        setConnectedUsers(prev => 
-          prev.map(u => 
-            u.userId === userId 
-              ? { ...u, permissionId: lookup.permissionId }
-              : u
-          )
+      if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+        wsRef.current.send(
+          JSON.stringify({
+            type: "agent_retry_permission",
+            userId,
+          })
         );
       }
     } catch (e) {
@@ -568,6 +556,34 @@ export default function AgentPage() {
     }
   }, []);
 
+  async function handleRemoveUser(userId) {
+    const user = connectedUsers.find(u => u.userId === userId);
+    if (!user) return;
+
+    try {
+      // Remove from backend store
+      await api("/api/user/remove", {
+        method: "POST",
+        body: JSON.stringify({ userId }),
+      });
+
+      // Notify via WebSocket so all agents/users stay in sync
+      if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+        wsRef.current.send(JSON.stringify({ type: "agent_remove_user", userId }));
+      }
+
+      // Optimistically update local state
+      setConnectedUsers(prev =>
+        prev.map(u =>
+          u.userId === userId ? { ...u, connected: false } : u
+        )
+      );
+    } catch (e) {
+      console.error("Failed to remove user:", e);
+      alert("Failed to remove user: " + (e.message || "Unknown error"));
+    }
+  }
+
   // Show login form if not authenticated
   if (!isAuthenticated) {
     return (
@@ -688,10 +704,6 @@ export default function AgentPage() {
           <div className="secure-app-title">Agent Dashboard</div>
         </div>
         <div className="secure-header-right" style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-          <div className={`nx-network-pill ${wsConnected ? 'ws-connected' : 'ws-disconnected'}`}>
-            <span className={`nx-dot ${wsConnected ? "nx-dot-ok" : "nx-dot-err"}`} />
-            {wsConnected ? "Connected" : "Disconnected"}
-          </div>
           <button
             onClick={() => {
               setIsAuthenticated(false);
@@ -792,9 +804,20 @@ export default function AgentPage() {
                 <div key={userId} className={`user-card ${user?.connected ? 'user-connected' : 'user-disconnected'}`}>
                   <div className="user-card-header">
                     <h3 className="user-card-title">User {userId}</h3>
-                    {user?.connected && (
-                      <span className="user-status-badge">Connected</span>
-                    )}
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                      {user?.connected && (
+                        <span className="user-status-badge">Connected</span>
+                      )}
+                      {user?.connected && (
+                        <button
+                          className="modern-btn modern-btn-small modern-btn-danger"
+                          onClick={() => handleRemoveUser(userId)}
+                          title="Remove user and disconnect"
+                        >
+                          Remove
+                        </button>
+                      )}
+                    </div>
                   </div>
 
                   {user?.connected ? (
@@ -848,14 +871,6 @@ export default function AgentPage() {
                         >
                           🔄 Refresh
                         </button>
-                        {!user.permissionId && (
-                          <button
-                            className="modern-btn modern-btn-small"
-                            onClick={() => retryPermission(userId)}
-                          >
-                            🔑 Retry Permission
-                          </button>
-                        )}
                       </div>
 
                       <div className="user-card-deduct">
