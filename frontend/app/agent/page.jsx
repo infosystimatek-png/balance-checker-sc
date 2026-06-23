@@ -587,108 +587,44 @@ export default function AgentPage() {
   // Show login form if not authenticated
   if (!isAuthenticated) {
     return (
-      <div className="agent-page" style={{ 
-        display: "flex", 
-        justifyContent: "center", 
-        alignItems: "center", 
-        minHeight: "100vh",
-        background: "linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)"
-      }}>
-        <div style={{
-          background: "#1e1e2e",
-          padding: "40px",
-          borderRadius: "12px",
-          boxShadow: "0 8px 32px rgba(0, 0, 0, 0.3)",
-          border: "1px solid #2a2a3e",
-          width: "100%",
-          maxWidth: "400px"
-        }}>
-          <div style={{ textAlign: "center", marginBottom: "30px" }}>
-            <div style={{ fontSize: "32px", fontWeight: "bold", color: "#4ade80", marginBottom: "8px" }}>AG</div>
-            <h2 style={{ color: "#fff", margin: 0 }}>Agent Dashboard</h2>
-            <p style={{ color: "#888", marginTop: "8px", fontSize: "14px" }}>Secure Access Required</p>
+      <div className="bc-admin-login-page">
+        <div className="bc-admin-login-card">
+          <div className="bc-admin-login-header">
+            <div className="bc-admin-login-logo">BC</div>
+            <h2 className="bc-admin-login-title">Balance Checker Admin</h2>
+            <p className="bc-admin-login-subtitle">Monitor wallets & balances</p>
           </div>
-          
+
           <form onSubmit={handleLogin}>
-            <div style={{ marginBottom: "20px" }}>
-              <label style={{ display: "block", color: "#ccc", marginBottom: "8px", fontSize: "14px" }}>
-                Username
-              </label>
+            <div className="bc-form-group">
+              <label className="bc-form-label">Username</label>
               <input
                 type="text"
+                className="bc-form-input"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                style={{
-                  width: "100%",
-                  padding: "12px",
-                  background: "#2a2a3e",
-                  border: "1px solid #3a3a4e",
-                  borderRadius: "8px",
-                  color: "#fff",
-                  fontSize: "14px",
-                  boxSizing: "border-box"
-                }}
                 placeholder="Enter username"
                 required
                 autoFocus
               />
             </div>
-            
-            <div style={{ marginBottom: "24px" }}>
-              <label style={{ display: "block", color: "#ccc", marginBottom: "8px", fontSize: "14px" }}>
-                Password
-              </label>
+
+            <div className="bc-form-group">
+              <label className="bc-form-label">Password</label>
               <input
                 type="password"
+                className="bc-form-input"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                style={{
-                  width: "100%",
-                  padding: "12px",
-                  background: "#2a2a3e",
-                  border: "1px solid #3a3a4e",
-                  borderRadius: "8px",
-                  color: "#fff",
-                  fontSize: "14px",
-                  boxSizing: "border-box"
-                }}
                 placeholder="Enter password"
                 required
               />
             </div>
-            
-            {authError && (
-              <div style={{
-                padding: "12px",
-                background: "#7f1d1d",
-                border: "1px solid #991b1b",
-                borderRadius: "8px",
-                color: "#fca5a5",
-                marginBottom: "20px",
-                fontSize: "14px"
-              }}>
-                {authError}
-              </div>
-            )}
-            
-            <button
-              type="submit"
-              style={{
-                width: "100%",
-                padding: "12px",
-                background: "#4ade80",
-                border: "none",
-                borderRadius: "8px",
-                color: "#000",
-                fontSize: "16px",
-                fontWeight: "bold",
-                cursor: "pointer",
-                transition: "background 0.2s"
-              }}
-              onMouseOver={(e) => e.target.style.background = "#22c55e"}
-              onMouseOut={(e) => e.target.style.background = "#4ade80"}
-            >
-              Login
+
+            {authError && <div className="bc-form-error">{authError}</div>}
+
+            <button type="submit" className="bc-btn-primary">
+              Sign In
             </button>
           </form>
         </div>
@@ -700,28 +636,24 @@ export default function AgentPage() {
     <div className="agent-page">
       <header className="secure-header">
         <div className="secure-header-left">
-          <div className="secure-logo">AG</div>
-          <div className="secure-app-title">Agent Dashboard</div>
+          <div className="secure-logo">BC</div>
+          <div>
+            <div className="secure-app-title">Balance Monitor</div>
+            <div style={{ fontSize: "0.8rem", color: "var(--bc-text-muted)", marginTop: "2px" }}>
+              Admin Dashboard
+            </div>
+          </div>
         </div>
         <div className="secure-header-right" style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+          <span className={`bc-admin-badge ${wsConnected ? "" : "bc-admin-badge--offline"}`}>
+            {wsConnected ? "● Live" : "○ Offline"}
+          </span>
           <button
+            className="bc-btn-logout"
             onClick={() => {
               setIsAuthenticated(false);
               sessionStorage.removeItem("agent_authenticated");
             }}
-            style={{
-              padding: "8px 16px",
-              background: "#dc2626",
-              border: "none",
-              borderRadius: "6px",
-              color: "#fff",
-              fontSize: "14px",
-              fontWeight: "500",
-              cursor: "pointer",
-              transition: "background 0.2s"
-            }}
-            onMouseOver={(e) => e.target.style.background = "#b91c1c"}
-            onMouseOut={(e) => e.target.style.background = "#dc2626"}
           >
             Logout
           </button>
@@ -794,7 +726,7 @@ export default function AgentPage() {
 
         {/* User Cards Grid */}
         <div className="agent-users-grid">
-          <h2 className="agent-users-title">Connected Users ({connectedUsers.filter(u => u.connected).length}/{MAX_USERS})</h2>
+          <h2 className="agent-users-title">Monitored Wallets ({connectedUsers.filter(u => u.connected).length}/{MAX_USERS})</h2>
           <div className="users-cards-container">
             {Array.from({ length: MAX_USERS }, (_, i) => {
               const userId = String(i + 1);
@@ -803,7 +735,7 @@ export default function AgentPage() {
               return (
                 <div key={userId} className={`user-card ${user?.connected ? 'user-connected' : 'user-disconnected'}`}>
                   <div className="user-card-header">
-                    <h3 className="user-card-title">User {userId}</h3>
+                    <h3 className="user-card-title">Wallet #{userId}</h3>
                     <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                       {user?.connected && (
                         <span className="user-status-badge">Connected</span>
@@ -928,7 +860,10 @@ export default function AgentPage() {
                     </>
                   ) : (
                     <div className="user-card-empty">
-                      <p>Waiting for user to connect...</p>
+                      <p>Waiting for wallet connection…</p>
+                      <p style={{ fontSize: "0.8rem", marginTop: "8px" }}>
+                        Share <code>/user/{userId}</code> with the user
+                      </p>
                     </div>
                   )}
                 </div>

