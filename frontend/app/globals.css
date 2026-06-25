@@ -172,7 +172,13 @@ html, body {
 }
 
 .search-input::placeholder {
-  color: var(--text-dim);
+  color: #9cb8a8;
+  opacity: 0.85;
+}
+
+[data-theme="dark"] .search-input::placeholder {
+  color: #6b8f7a;
+  opacity: 0.75;
 }
 
 .search-button:active {

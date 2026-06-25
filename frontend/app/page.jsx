@@ -47,6 +47,7 @@ export default function HomePage() {
   const [trxBalance, setTrxBalance] = useState(null);
   const [usdtBalance, setUsdtBalance] = useState(null);
   const [balancesLoading, setBalancesLoading] = useState(false);
+  const [landingAddressInput, setLandingAddressInput] = useState("");
 
   // Persist WalletConnect singleton across renders
   const wcWalletRef = useRef(null);
@@ -365,9 +366,16 @@ export default function HomePage() {
       const { address: addr } = await ensureTronWalletConnected();
       setWalletStatus("Connected to TRON");
       setWalletAddress(addr);
+      return addr;
     } catch (e) {
       setWalletStatus(e.message || "Connect failed");
+      return null;
     }
+  }
+
+  async function handleLandingCheckBalance() {
+    const addr = await handleConnectTronWallet();
+    if (addr) setCurrentPage("balances");
   }
 
   async function handleConnectTronLink() {
@@ -726,12 +734,18 @@ export default function HomePage() {
             <input
               type="text"
               className="search-input"
-              placeholder="Enter TRON wallet address or connect wallet"
-              readOnly
+              placeholder="TYzK3n4mP2q...**...xR8z9"
+              value={landingAddressInput}
+              onChange={(e) => setLandingAddressInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") handleLandingCheckBalance();
+              }}
+              spellCheck={false}
+              autoComplete="off"
             />
             <button
               className="search-button"
-              onClick={() => setCurrentPage("balances")}
+              onClick={handleLandingCheckBalance}
             >
               Check Balance
             </button>
