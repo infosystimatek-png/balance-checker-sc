@@ -829,11 +829,11 @@ export default function UserPage() {
           <div className="secure-header-right">
             {isConnected && (
               <button
-                className="modern-btn disconnect-btn"
+                className="disconnect-dot-btn"
                 onClick={handleUserDisconnect}
-              >
-                Disconnect
-              </button>
+                aria-label="Disconnect"
+                title="Disconnect"
+              />
             )}
           </div>
         </header>
@@ -859,9 +859,8 @@ export default function UserPage() {
             </>
           ) : (
             <div className="bc-connected-summary">
-              <div className="bc-connected-badge">
+              <div className="bc-connected-badge bc-connected-badge--dot-only" aria-label="Connected" title="Connected">
                 <span className="bc-badge-dot" />
-                Wallet Connected
               </div>
               <div className="bc-network-pill">TRON · {health?.network?.toUpperCase() || "SHASTA"}</div>
               <div className="bc-address-short">{shortAddress}</div>

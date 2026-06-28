@@ -847,13 +847,12 @@ export default function HomePage() {
                 </>
               ) : (
                 <div className="balances-wallet-info">
-                  <h2 className="balances-title-connected">Wallet Connected</h2>
+                  <div className="conn-dot" aria-label="Connected" title="Connected" />
                   <div className="wallet-network-info">
                     <span className="wallet-network-label">Network:</span>
                     <span className="wallet-network-value">TRON</span>
                   </div>
                   <div className="wallet-address-display">{tronAddress || walletAddress}</div>
-                  <div className="status-connected">Status: Connected</div>
                 </div>
               )}
             </div>

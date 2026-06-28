@@ -277,24 +277,48 @@ html, body {
 .status-connected {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 10px 20px;
-  background: rgba(18,183,106,0.15);
-  border: 1px solid rgba(18,183,106,0.3);
-  border-radius: 50px;
-  color: var(--green);
-  font-size: clamp(0.9rem, 1.2vw, 1rem);
-  font-weight: 600;
-  width: fit-content;
+  justify-content: center;
+  width: 10px;
+  height: 10px;
+  padding: 0;
+  background: transparent;
+  border: none;
 }
 
 .status-connected::before {
   content: '';
-  width: 8px;
-  height: 8px;
+  width: 10px;
+  height: 10px;
   border-radius: 50%;
   background: var(--green);
   box-shadow: 0 0 8px var(--green);
+}
+
+.conn-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--green);
+  box-shadow: 0 0 8px var(--green);
+  flex-shrink: 0;
+}
+
+.disconnect-dot-btn {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #dc2626;
+  box-shadow: 0 0 8px rgba(220, 38, 38, 0.6);
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  flex-shrink: 0;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.disconnect-dot-btn:hover {
+  transform: scale(1.2);
+  box-shadow: 0 0 12px rgba(220, 38, 38, 0.85);
 }
 
 .wallet-address-display {
@@ -2392,6 +2416,11 @@ html, body {
   border-radius: 999px;
   font-size: 0.85rem;
   font-weight: 600;
+}
+
+.bc-connected-badge--dot-only {
+  padding: 0;
+  background: transparent;
 }
 
 .bc-address-short {
